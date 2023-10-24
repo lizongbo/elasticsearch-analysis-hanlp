@@ -4,7 +4,6 @@ import com.hankcs.cfg.Configuration;
 import com.hankcs.dic.DictionaryFile;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.core.internal.io.IOUtils;
 import org.elasticsearch.plugin.analysis.hanlp.AnalysisHanLPPlugin;
 
 import java.io.DataInputStream;
@@ -49,9 +48,7 @@ public class DictionaryFileCache {
         }
         List<DictionaryFile> dictionaryFiles = AccessController.doPrivileged((PrivilegedAction<List<DictionaryFile>>) () -> {
             List<DictionaryFile> dictionaryFileList = new ArrayList<>();
-            DataInputStream in = null;
-            try {
-                in = new DataInputStream(new FileInputStream(file));
+            try (DataInputStream in = new DataInputStream(new FileInputStream(file))){
                 int size = in.readInt();
                 for (int i = 0; i < size; i++) {
                     DictionaryFile dictionaryFile = new DictionaryFile();
@@ -60,8 +57,6 @@ public class DictionaryFileCache {
                 }
             } catch (IOException e) {
                 logger.debug("can not load custom dictionary cache file", e);
-            } finally {
-                IOUtils.closeWhileHandlingException(in);
             }
             return dictionaryFileList;
         });
@@ -70,11 +65,9 @@ public class DictionaryFileCache {
 
     public static void writeCache() {
         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            DataOutputStream out = null;
-            try {
-                logger.info("begin write down HanLP custom dictionary file cache, file path: {}, custom dictionary file list: {}",
-                        cachePath.toFile().getAbsolutePath(), Arrays.toString(customDictionaryFileList.toArray()));
-                out = new DataOutputStream(new FileOutputStream(cachePath.toFile()));
+            logger.info("begin write down HanLP custom dictionary file cache, file path: {}, custom dictionary file list: {}",
+                cachePath.toFile().getAbsolutePath(), Arrays.toString(customDictionaryFileList.toArray()));
+            try (DataOutputStream out = new DataOutputStream(new FileOutputStream(cachePath.toFile()))){
                 out.writeInt(customDictionaryFileList.size());
                 for (DictionaryFile dictionaryFile : customDictionaryFileList) {
                     dictionaryFile.write(out);
@@ -82,8 +75,6 @@ public class DictionaryFileCache {
                 logger.info("write down HanLP custom dictionary file cache successfully");
             } catch (IOException e) {
                 logger.debug("can not write down HanLP custom dictionary file cache", e);
-            } finally {
-                IOUtils.closeWhileHandlingException(out);
             }
             return null;
         });

@@ -18,8 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.elasticsearch.SpecialPermission;
-import org.elasticsearch.common.collect.Tuple;
-import org.elasticsearch.core.internal.io.IOUtils;
+import com.hankcs.Tuple;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -98,9 +97,7 @@ public class RemoteMonitor implements Runnable {
             head.setHeader(HttpHeaders.IF_NONE_MATCH, eTags);
         }
 
-        CloseableHttpResponse response = null;
-        try {
-            response = httpclient.execute(head);
+        try (CloseableHttpResponse response = httpclient.execute(head) ){
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 if ((response.getLastHeader(HttpHeaders.LAST_MODIFIED) != null)
                         && !response.getLastHeader(HttpHeaders.LAST_MODIFIED).getValue().equalsIgnoreCase(lastModified)) {
@@ -116,8 +113,6 @@ public class RemoteMonitor implements Runnable {
             }
         } catch (Exception e) {
             logger.error(() -> new ParameterizedMessage("remote_ext_dict load from [{}] error", location), e);
-        } finally {
-            IOUtils.closeWhileHandlingException(response);
         }
     }
 
@@ -155,14 +150,12 @@ public class RemoteMonitor implements Runnable {
     private void loadRemoteWordsUnprivileged(String location) {
         Tuple<String, Nature> defaultInfo = analysisDefaultInfo(location);
         CloseableHttpClient httpclient = HttpClients.createDefault();
-        CloseableHttpResponse response = null;
-        BufferedReader in = null;
         HttpGet get = new HttpGet(defaultInfo.v1());
         get.setConfig(buildRequestConfig());
-        try {
-            response = httpclient.execute(get);
+        try (CloseableHttpResponse response = httpclient.execute(get) ){
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                in = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), analysisDefaultCharset(response)));
+                try(BufferedReader in = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), analysisDefaultCharset(response)))){
+                ;
                 String line;
                 boolean firstLine = true;
                 while ((line = in.readLine()) != null) {
@@ -187,14 +180,10 @@ public class RemoteMonitor implements Runnable {
                     logger.debug("hanlp remote custom word: {}", word);
                     CustomDictionary.insert(word, analysisNatureWithFrequency(defaultInfo.v2(), param));
                 }
-                in.close();
-                response.close();
+                }
             }
-            response.close();
         } catch (IllegalStateException | IOException e) {
             logger.error(() -> new ParameterizedMessage("get remote words from [{}] error", location), e);
-        } finally {
-            IOUtils.closeWhileHandlingException(in, response);
         }
     }
 
@@ -205,14 +194,11 @@ public class RemoteMonitor implements Runnable {
      */
     private void loadRemoteStopWordsUnprivileged(String location) {
         CloseableHttpClient httpclient = HttpClients.createDefault();
-        CloseableHttpResponse response = null;
-        BufferedReader in = null;
         HttpGet get = new HttpGet(location);
         get.setConfig(buildRequestConfig());
-        try {
-            response = httpclient.execute(get);
+        try (CloseableHttpResponse response = httpclient.execute(get)){
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                in = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), analysisDefaultCharset(response)));
+                try(BufferedReader  in = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), analysisDefaultCharset(response)))){
                 String line;
                 boolean firstLine = true;
                 while ((line = in.readLine()) != null) {
@@ -223,14 +209,10 @@ public class RemoteMonitor implements Runnable {
                     logger.debug("hanlp remote stop word: {}", line);
                     CoreStopWordDictionary.add(line);
                 }
-                in.close();
-                response.close();
+                }
             }
-            response.close();
         } catch (IllegalStateException | IOException e) {
             logger.error(() -> new ParameterizedMessage("get remote words from [{}] error", location), e);
-        } finally {
-            IOUtils.closeWhileHandlingException(in, response);
         }
     }
 

@@ -3,7 +3,6 @@ package com.hankcs.dic.config;
 import com.hankcs.dic.Dictionary;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.core.internal.io.IOUtils;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -52,17 +51,13 @@ public class RemoteDictConfig {
     }
 
     public void loadConfig() {
-        InputStream input = null;
-        try {
-            logger.info("try load remote hanlp config from {}", configFile);
-            input = new FileInputStream(configFile);
+        logger.info("try load remote hanlp config from {}", configFile);
+        try(InputStream input = new FileInputStream(configFile)) {
             props.loadFromXML(input);
         } catch (FileNotFoundException e) {
             logger.error("remote hanlp config isn't exist", e);
         } catch (Exception e) {
             logger.error("can not load remote hanlp config", e);
-        } finally {
-            IOUtils.closeWhileHandlingException(input);
         }
     }
 

@@ -10,7 +10,6 @@ import com.hankcs.hanlp.utility.Predefine;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
-import org.elasticsearch.core.internal.io.IOUtils;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
@@ -101,17 +100,13 @@ public class CoreStopWordDictionary {
     }
 
     private static boolean save() {
-        DataOutputStream out = null;
-        try {
-            out = new DataOutputStream(new BufferedOutputStream(IOUtil.newOutputStream(Config.CoreStopWordDictionaryPath + ".bin")));
+        try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(IOUtil.newOutputStream(Config.CoreStopWordDictionaryPath + ".bin")))){
             dictionary.save(out);
             return true;
         } catch (Exception e) {
             logger.error(() ->
                     new ParameterizedMessage("can not save stop word dictionary to [{}] error", Config.CoreStopWordDictionaryPath), e);
             return false;
-        } finally {
-            IOUtils.closeWhileHandlingException(out);
         }
     }
 
